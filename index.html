@@ -2,7 +2,10 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>SERVER INVADERS</title>
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
 <style>
@@ -60,9 +63,31 @@ canvas{display:block;background:#000;image-rendering:pixelated;border:1px solid 
 .srv-card .pip{width:12px;height:5px;border-radius:1px}
 #repair-screen .skip-btn{background:#000;border:1px solid #2a7a2a;color:#4fdc4f;font-family:'Share Tech Mono',monospace;font-size:10px;padding:6px 18px;cursor:pointer;letter-spacing:1px;margin-top:4px}
 #repair-screen .skip-btn:hover{border-color:#55ff88;color:#55ff88}
+
+/* ─── MOBILE RESPONSIVE ─────────────────────────────────────── */
+html,body{touch-action:none;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+#game-wrapper{display:flex;flex-direction:column;align-items:center;width:100%;transform-origin:top center}
+#hud,#buffs-display,#srv-legend{transition:width 0.1s}
+/* virtual controls */
+#vcontrols{display:none;width:100%;background:#000;border-top:1px solid #0a2a0a;padding:8px 10px;box-sizing:border-box}
+#vcontrols-inner{display:flex;justify-content:space-between;align-items:center;max-width:680px;margin:0 auto}
+.vbtn{background:#000;border:1px solid #0a3a0a;color:#00ffcc;font-family:'Share Tech Mono',monospace;font-size:11px;padding:0;border-radius:4px;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:none;display:flex;align-items:center;justify-content:center;transition:background 0.05s,border-color 0.05s}
+.vbtn:active,.vbtn.pressed{background:#0a2a0a;border-color:#00ffcc}
+#btn-left{width:72px;height:56px;font-size:22px}
+#btn-right{width:72px;height:56px;font-size:22px}
+#btn-fire{width:90px;height:56px;font-size:20px;border-color:#00ffcc}
+#btn-fire.beam-mode{border-color:#ff44ff;color:#ff44ff}
+#btn-fire.beam-mode.pressed{background:#1a001a}
+#btn-pause-m{width:52px;height:40px;font-size:14px;border-color:#0a3a0a;color:#33cc88;align-self:center}
+.dpad{display:flex;gap:6px;align-items:center}
+@media(max-width:700px){
+  #vcontrols{display:block}
+  body{justify-content:flex-start;padding-top:0}
+}
 </style>
 </head>
 <body>
+<div id="game-wrapper">
 <div id="hud">
   <div class="hud-item">SCORE: <span id="score-val">0</span></div>
   <div style="color:#00ffcc;font-family:'Orbitron',monospace;font-size:14px;font-weight:900;letter-spacing:3px">SERVER INVADERS</div>
@@ -103,6 +128,17 @@ canvas{display:block;background:#000;image-rendering:pixelated;border:1px solid 
   </div>
 </div>
 <div id="srv-legend"></div>
+</div><!-- /game-wrapper -->
+<div id="vcontrols">
+  <div id="vcontrols-inner">
+    <div class="dpad">
+      <button class="vbtn" id="btn-left">&#8592;</button>
+      <button class="vbtn" id="btn-right">&#8594;</button>
+    </div>
+    <button class="vbtn" id="btn-fire">&#9654; FIRE</button>
+    <button class="vbtn" id="btn-pause-m">&#9646;&#9646; PAUSE</button>
+  </div>
+</div>
 
 <script>
 const canvas=document.getElementById('gc');
@@ -688,6 +724,76 @@ canvas.addEventListener('touchend',e=>{
 
 document.getElementById('start-btn').addEventListener('click',startGame);
 initStars();initShip();initServers();
+
+// ─── RESPONSIVE SCALING ──────────────────────────────────────
+function scaleGame(){
+  const isMobile=window.innerWidth<=700;
+  const maxW=isMobile?window.innerWidth:680;
+  const scale=Math.min(1,maxW/680);
+  const wrapper=document.getElementById('game-wrapper');
+  wrapper.style.transform=`scale(${scale})`;
+  wrapper.style.width=(680)+'px';
+  // compensate height so wrapper doesn't leave dead space
+  const scaledH=wrapper.offsetHeight*scale;
+  wrapper.style.marginBottom=`${(wrapper.offsetHeight-scaledH)}px`;
+  document.getElementById('vcontrols').style.marginTop=isMobile?'0':'0';
+}
+window.addEventListener('resize',scaleGame);
+scaleGame();
+
+// ─── VIRTUAL CONTROLS ────────────────────────────────────────
+const btnLeft=document.getElementById('btn-left');
+const btnRight=document.getElementById('btn-right');
+const btnFire=document.getElementById('btn-fire');
+const btnPauseM=document.getElementById('btn-pause-m');
+
+function setPressed(el,val){
+  if(val)el.classList.add('pressed');
+  else el.classList.remove('pressed');
+}
+
+// Left button
+btnLeft.addEventListener('touchstart',e=>{e.preventDefault();keys['ArrowLeft']=true;setPressed(btnLeft,true);},{passive:false});
+btnLeft.addEventListener('touchend',e=>{e.preventDefault();keys['ArrowLeft']=false;setPressed(btnLeft,false);},{passive:false});
+btnLeft.addEventListener('touchcancel',e=>{keys['ArrowLeft']=false;setPressed(btnLeft,false);});
+
+// Right button
+btnRight.addEventListener('touchstart',e=>{e.preventDefault();keys['ArrowRight']=true;setPressed(btnRight,true);},{passive:false});
+btnRight.addEventListener('touchend',e=>{e.preventDefault();keys['ArrowRight']=false;setPressed(btnRight,false);},{passive:false});
+btnRight.addEventListener('touchcancel',e=>{keys['ArrowRight']=false;setPressed(btnRight,false);});
+
+// Fire/Beam button
+function updateFireBtn(){
+  if(activeBuffs.laser){btnFire.classList.add('beam-mode');btnFire.textContent='\u2550 BEAM';}
+  else{btnFire.classList.remove('beam-mode');btnFire.innerHTML='&#9654; FIRE';}
+}
+btnFire.addEventListener('touchstart',e=>{
+  e.preventDefault();setPressed(btnFire,true);
+  if(gameState==='playing'){
+    if(activeBuffs.laser){keys[' ']=true;}
+    else{shootPlayer();}
+  }
+},{passive:false});
+btnFire.addEventListener('touchend',e=>{
+  e.preventDefault();setPressed(btnFire,false);
+  if(activeBuffs.laser)keys[' ']=false;
+},{passive:false});
+btnFire.addEventListener('touchcancel',e=>{setPressed(btnFire,false);keys[' ']=false;});
+
+// Pause button
+btnPauseM.addEventListener('touchstart',e=>{
+  e.preventDefault();
+  if(gameState==='playing'||gameState==='paused')togglePause();
+},{passive:false});
+
+// Update fire btn style when buffs change (hook into updateBuffsUI)
+const _origUpdateBuffsUI=updateBuffsUI;
+// We patch it inline after definition — use a polling approach instead
+setInterval(updateFireBtn,500);
+
+// Prevent all default touch on canvas (already handled)
+document.addEventListener('touchmove',e=>{if(e.target!==canvas)e.preventDefault();},{passive:false});
+
 loop();
 </script>
 </body>
