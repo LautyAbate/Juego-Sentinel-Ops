@@ -618,7 +618,6 @@ function endGame(){
       SCORE FINAL: <span style="color:#00ffcc;font-size:18px;font-weight:bold">${score.toLocaleString()}</span><br>
       NIVEL: <span style="color:#ffcc00">LVL ${level}</span> &nbsp;|&nbsp;
       SERVERS ONLINE: <span style="color:${onlineSrvs>0?'#00ff88':'#ff4444'}">${onlineSrvs}/6</span><br>
-      BUFFS PERDIDOS: <span style="color:#ff6644">${6-onlineSrvs}</span>
     </p>
     <button class="main-btn" id="start-btn" style="margin-top:8px;border-color:#ff4444;color:#ff4444" onmouseover="this.style.background='#ff4444';this.style.color='#000'" onmouseout="this.style.background='#000';this.style.color='#ff4444'">↺ REBOOT SYSTEM</button>`;
   document.getElementById('start-btn').addEventListener('click',startGame);
