@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SERVER INVADERS</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;overflow:hidden}
+#hud{display:flex;justify-content:space-between;align-items:center;width:680px;padding:6px 12px;background:#000;border:1px solid #0a2a0a;border-bottom:none}
+.hud-item{color:#0f0;font-family:'Orbitron',monospace;font-size:11px;letter-spacing:1px}
+.hud-item span{color:#00ffcc;font-size:13px;font-weight:700}
+#buffs-display{width:680px;display:flex;gap:6px;padding:3px 10px;background:#000;border-left:1px solid #0a2a0a;border-right:1px solid #0a2a0a;min-height:22px;flex-wrap:wrap;align-items:center}
+.buff-pill{border:1px solid;font-family:'Share Tech Mono',monospace;font-size:9px;padding:1px 7px;border-radius:2px;background:#000}
+#game-container{position:relative}
+canvas{display:block;background:#000;image-rendering:pixelated;border:1px solid #0a2a0a}
+#overlay{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:rgba(0,0,0,0.93)}
+#overlay h1{color:#00ffcc;font-family:'Orbitron',monospace;font-size:26px;letter-spacing:4px;text-shadow:0 0 20px rgba(0,255,200,0.5)}
+#overlay .sub{color:#22ff99;font-family:'Share Tech Mono',monospace;font-size:10px;text-align:center;max-width:360px;line-height:1.9}
+#overlay .controls{color:#44ffcc;font-family:'Share Tech Mono',monospace;font-size:10px;text-align:center;line-height:1.9;border:1px solid #0f4428;padding:8px 18px}
+#overlay button.main-btn{background:#000;border:1px solid #00ffcc;color:#00ffcc;font-family:'Orbitron',monospace;font-size:12px;padding:10px 32px;cursor:pointer;letter-spacing:3px;margin-top:4px;transition:all 0.15s}
+#overlay button.main-btn:hover{background:#00ffcc;color:#000}
+#srv-legend{width:680px;display:flex;gap:0;background:#000;border:1px solid #0a2a0a;border-top:none}
+.sl-item{flex:1;font-family:'Share Tech Mono',monospace;font-size:8px;padding:3px 4px;text-align:center;border-right:1px solid #0a2a0a}
+.sl-item:last-child{border-right:none}
+.hud-item,
+#overlay h1,
+#overlay .sub,
+#overlay .controls,
+#overlay button.main-btn,
+#repair-screen h2,
+#repair-screen .rs-sub,
+#repair-screen .skip-btn,
+#buffs-display,
+.buff-pill,
+.sl-item,
+.srv-card{
+  text-shadow:0 0 6px currentColor;
+}
+/* repair screen */
+#repair-screen{position:absolute;top:0;left:0;width:100%;height:100%;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(0,0,0,0.95)}
+#repair-screen h2{color:#00ffcc;font-family:'Orbitron',monospace;font-size:16px;letter-spacing:3px}
+#repair-screen .rs-sub{color:#33cc88;font-family:'Share Tech Mono',monospace;font-size:10px;text-align:center;margin-top:-6px}
+#srv-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:460px}
+.srv-card{background:#000;border:1px solid #0a2a0a;padding:10px 12px;font-family:'Share Tech Mono',monospace;font-size:9px;cursor:pointer;transition:all 0.15s;text-align:center}
+.srv-card.dead{border-color:#330000;cursor:pointer}
+.srv-card.dead:hover{border-color:#ff4444;background:#0e0000}
+.srv-card.alive{border-color:#ffcc44;cursor:pointer;opacity:0.9}
+.srv-card.alive:hover{border-color:#ffee66;background:#0c0a00}
+.srv-card.full{border-color:#44ccff;cursor:not-allowed;opacity:0.4}
+.srv-card .sc-name{font-family:'Orbitron',monospace;font-size:10px;letter-spacing:1px;margin-bottom:4px}
+.srv-card .sc-status{font-size:8px;margin-top:4px}
+.srv-card .sc-pips{display:flex;gap:3px;justify-content:center;margin-top:5px}
+.srv-card .pip{width:12px;height:5px;border-radius:1px}
+#repair-screen .skip-btn{background:#000;border:1px solid #2a7a2a;color:#4fdc4f;font-family:'Share Tech Mono',monospace;font-size:10px;padding:6px 18px;cursor:pointer;letter-spacing:1px;margin-top:4px}
+#repair-screen .skip-btn:hover{border-color:#55ff88;color:#55ff88}
+</style>
+</head>
+<body>
+<div id="hud">
+  <div class="hud-item">SCORE: <span id="score-val">0</span></div>
+  <div style="color:#00ffcc;font-family:'Orbitron',monospace;font-size:14px;font-weight:900;letter-spacing:3px">SERVER INVADERS</div>
+  <div class="hud-item">LVL <span id="level-val">1</span> &nbsp; <span id="lives-val">♥ ♥ ♥</span></div>
+</div>
+<div id="buffs-display"></div>
+<div id="game-container">
+  <canvas id="gc" width="680" height="520"></canvas>
+
+  <!-- MENU / GAME OVER -->
+  <div id="overlay">
+    <h1>SERVER INVADERS</h1>
+    <p class="sub">
+      Los aliens son códigos de error HTTP.<br>
+      Cada servidor provee un buff específico.<br>
+      <span style="color:#ff4444">Si un servidor muere → ese buff desaparece.</span><br>
+      <span style="color:#00ffcc">Al limpiar una oleada de enemigos podés reparar un servidor.</span>
+    </p>
+    <div class="controls">
+      ← → &nbsp; Mover &nbsp;|&nbsp; ESPACIO &nbsp; Disparar<br>
+    </div>
+    <button class="main-btn" id="start-btn">▶ BOOT SYSTEM</button>
+  </div>
+
+  <!-- REPAIR SCREEN (entre waves) -->
+  <div id="repair-screen">
+    <h2>WAVE CLEARED</h2>
+    <p class="rs-sub" id="repair-sub">Elegí un servidor para reparar o curar</p>
+    <div id="srv-grid"></div>
+    <button class="skip-btn" id="skip-repair-btn">▶ CONTINUAR SIN REPARAR</button>
+  </div>
+</div>
+<div id="srv-legend"></div>
+
+<script>
+const canvas=document.getElementById('gc');
+const ctx=canvas.getContext('2d');
+const W=680,H=520;
+let gameState='menu'; // menu | playing | repair | gameover
+let score=0,lives=3,level=1,frameCount=0;
+let ship,bullets=[],aliens=[],alienBullets=[],particles=[],buffs=[],activeBuffs={},servers=[];
+let keys={};
+let alienDir=1,alienSpeed=0.5;
+let alienShootTimer=0;
+let invincibleTimer=0;
+let floaters=[];
+// continuous laser beam
+let beamActive=false, beamHits=[], beamCooldownTimer=0;
+const BEAM_TICK_DAMAGE=6; // frames between each beam hit on same alien
+
+const ERROR_CODES=[
+  {code:'404',color:'#ff4444',pts:100},{code:'500',color:'#ff6600',pts:200},
+  {code:'503',color:'#ff0088',pts:180},{code:'502',color:'#cc44ff',pts:150},
+  {code:'401',color:'#44aaff',pts:80},{code:'403',color:'#ffcc00',pts:90},
+  {code:'429',color:'#ff44aa',pts:175},{code:'301',color:'#44ffaa',pts:50},
+  {code:'408',color:'#ff7744',pts:110},{code:'418',color:'#44ccff',pts:300},
+  {code:'422',color:'#ff44ff',pts:130},{code:'504',color:'#ff9900',pts:190},
+];
+
+const ALL_BUFFS=[
+  {id:'rapid',  label:'RAPID FIRE', color:'#ffcc00',icon:'⚡',desc:'Cadencia x3',      duration:8000},
+  {id:'triple', label:'TRIPLE SHOT',color:'#00ffcc',icon:'\\|/',desc:'3 proyectiles',     duration:7000},
+  {id:'shield', label:'SHIELD',     color:'#4488ff',icon:'◈',desc:'Escudo temporal',   duration:6000},
+  {id:'laser',  label:'MEGA LASER', color:'#ff44ff',icon:'═',desc:'Rayo continuo',     duration:7000},
+  {id:'slow',   label:'SLOW MO',    color:'#88ff44',icon:'⏱',desc:'Aliens lentos',     duration:7000},
+  {id:'wide',   label:'WIDE SHOT',  color:'#ff8844',icon:'|||',desc:'Disparo ancho', duration:7000},
+];
+
+function getAvailableBuffPool(){return servers.filter(s=>s.hp>0).map(s=>s.buff);}
+
+function spawnBuff(x,y){
+  const pool=getAvailableBuffPool();
+  if(!pool.length)return;
+  if(Math.random()>0.08)return;
+  const bt=pool[Math.floor(Math.random()*pool.length)];
+  buffs.push({x:x-15,y,w:32,h:17,type:bt,vy:0.85});
+}
+
+function initShip(){ship={x:W/2,y:H-80,w:36,h:46,speed:4,shootCooldown:0};}
+
+function initServers(){
+  servers=[];
+  const sw=78,sh=38,gap=12,total=6;
+  const startX=(W-(total*sw+(total-1)*gap))/2;
+  for(let i=0;i<total;i++){
+    servers.push({x:startX+i*(sw+gap),y:H-46,w:sw,h:sh,hp:3,maxHp:3,id:i,damaged:0,buff:ALL_BUFFS[i]});
+  }
+  buildSrvLegend();
+}
+
+function buildSrvLegend(){
+  const leg=document.getElementById('srv-legend');leg.innerHTML='';
+  servers.forEach(s=>{
+    const d=document.createElement('div');d.className='sl-item';d.id=`leg-srv-${s.id}`;
+    d.style.color=s.buff.color;d.innerHTML=`${s.buff.icon} ${s.buff.label}`;leg.appendChild(d);
+  });
+}
+function updateSrvLegend(){
+  servers.forEach(s=>{
+    const el=document.getElementById(`leg-srv-${s.id}`);if(!el)return;
+    if(s.hp===0){el.style.color='#222';el.style.textDecoration='line-through';}
+    else{el.style.color=s.buff.color;el.style.textDecoration='none';}
+  });
+}
+
+function initAliens(lvl){
+  aliens=[];
+  const cols=10,rows=4,gx=58,gy=40;
+  const startX=(W-cols*gx)/2,startY=55;
+  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
+    const ec=ERROR_CODES[(r*cols+c)%ERROR_CODES.length];
+    aliens.push({x:startX+c*gx,y:startY+r*gy,w:44,h:22,
+      code:ec.code,color:ec.color,pts:ec.pts,alive:true,
+      animTick:Math.random()*20|0,row:r,col:c,flashTick:-99});
+  }
+  alienDir=1;alienSpeed=0.35+lvl*0.1;alienShootTimer=0;
+}
+
+// ─── REPAIR SCREEN ────────────────────────────────────────────────
+function showRepairScreen(){
+  gameState='repair';
+  const rs=document.getElementById('repair-screen');
+  rs.style.display='flex';
+  const grid=document.getElementById('srv-grid');
+  grid.innerHTML='';
+  const anyDamaged=servers.some(s=>s.hp>0&&s.hp<s.maxHp);
+  const anyDead=servers.some(s=>s.hp===0);
+  document.getElementById('repair-sub').textContent=
+    anyDead?'Elegí un servidor OFFLINE para reiniciarlo (HP 1) o curar uno dañado':
+    anyDamaged?'Elegí un servidor dañado para recuperar 1 HP':
+    'Todos los servidores están al máximo. Seguí adelante.';
+
+  servers.forEach(s=>{
+    const card=document.createElement('div');
+    card.className='srv-card';
+    const isFull=s.hp===s.maxHp;
+    const isDead=s.hp===0;
+    if(isFull) card.classList.add('full');
+    else if(!isDead) card.classList.add('alive'); // damaged but alive
+    else card.classList.add('dead');
+
+    // pips HTML
+    let pipsHTML='<div class="sc-pips">';
+    for(let i=0;i<s.maxHp;i++){
+      pipsHTML+=`<div class="pip" style="background:${i<s.hp?s.buff.color:'#1a0000'}"></div>`;
+    }
+    pipsHTML+='</div>';
+
+    const statusText=isDead?'OFFLINE — click para reiniciar':
+      isFull?'OPERATIVO AL 100%':
+      'DAÑADO — click para curar +1 HP';
+
+    card.innerHTML=`<div class="sc-name" style="color:${isDead?'#ff6666':s.buff.color}">${s.buff.icon} SRV-0${s.id}</div>
+      <div style="color:${isDead?'#ff6666':s.buff.color};font-size:10px">${s.buff.label}</div>
+      ${pipsHTML}
+      <div class="sc-status" style="color:${isDead?'#ff7777':isFull?'#44ff99':'#ffcc44'}">${statusText}</div>`;
+
+    if(!isFull){
+      card.addEventListener('click',()=>repairServer(s.id));
+    }
+    grid.appendChild(card);
+  });
+  document.getElementById('skip-repair-btn').onclick=closeRepairAndNextWave;
+}
+
+function repairServer(id){
+  const s=servers.find(sv=>sv.id===id);
+  if(!s||s.hp===s.maxHp)return;
+  if(s.hp===0){s.hp=1;spawnFloater(W/2,H/2-30,`SRV-0${id} REBOOTED`,s.buff.color);}
+  else{s.hp=Math.min(s.maxHp,s.hp+1);spawnFloater(W/2,H/2-30,`SRV-0${id} REPAIRED`,s.buff.color);}
+  updateSrvLegend();
+  closeRepairAndNextWave();
+}
+
+function closeRepairAndNextWave(){
+  document.getElementById('repair-screen').style.display='none';
+  gameState='playing';
+  level++;
+  document.getElementById('level-val').textContent=level;
+  initAliens(level);
+  spawnParticles(W/2,H/2,'#00ffcc',35);
+  updateBuffsUI();
+}
+
+// ─── DRAW ─────────────────────────────────────────────────────────
+function drawShip(x,y,alpha){
+  ctx.save();ctx.globalAlpha=alpha||1;ctx.translate(x,y);
+  const g=ctx.createLinearGradient(-18,-23,18,23);
+  g.addColorStop(0,'#00ffcc');g.addColorStop(1,'#0088ff');
+  ctx.strokeStyle=g;ctx.lineWidth=2;ctx.shadowColor='#00ffcc';ctx.shadowBlur=10;
+  ctx.beginPath();ctx.moveTo(0,-24);ctx.lineTo(10,-10);ctx.lineTo(18,8);
+  ctx.lineTo(10,18);ctx.lineTo(0,13);ctx.lineTo(-10,18);ctx.lineTo(-18,8);ctx.lineTo(-10,-10);ctx.closePath();
+  ctx.stroke();ctx.fillStyle='rgba(0,255,200,0.07)';ctx.fill();
+  ctx.beginPath();ctx.arc(0,-2,5,0,Math.PI*2);ctx.strokeStyle='#00ffcc';ctx.lineWidth=1.5;ctx.stroke();
+  const pulse=(Math.sin(frameCount*0.14)+1)/2;
+  ctx.beginPath();ctx.moveTo(-5,18);ctx.lineTo(0,28+pulse*5);ctx.lineTo(5,18);
+  ctx.strokeStyle=`rgba(0,200,255,${0.3+pulse*0.6})`;ctx.lineWidth=2;ctx.stroke();
+  if(activeBuffs.shield){
+    ctx.beginPath();ctx.arc(0,0,27,0,Math.PI*2);
+    ctx.strokeStyle=`rgba(68,136,255,${0.5+Math.sin(frameCount*0.1)*0.3})`;ctx.lineWidth=2;ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawBeam(){
+  if(!beamActive||!activeBuffs.laser)return;
+  const bx=ship.x;
+  const flicker=(Math.sin(frameCount*0.6)+1)/2;
+  ctx.save();
+  // outer glow
+  ctx.strokeStyle=`rgba(255,0,255,${0.12+flicker*0.08})`;ctx.lineWidth=22;
+  ctx.beginPath();ctx.moveTo(bx,ship.y-26);ctx.lineTo(bx,0);ctx.stroke();
+  // mid
+  ctx.strokeStyle=`rgba(255,100,255,${0.35+flicker*0.15})`;ctx.lineWidth=8;
+  ctx.beginPath();ctx.moveTo(bx,ship.y-26);ctx.lineTo(bx,0);ctx.stroke();
+  // core
+  ctx.strokeStyle=`rgba(255,200,255,${0.8+flicker*0.2})`;ctx.lineWidth=2;
+  ctx.shadowColor='#ff44ff';ctx.shadowBlur=14;
+  ctx.beginPath();ctx.moveTo(bx,ship.y-26);ctx.lineTo(bx,0);ctx.stroke();
+  // scan line effect
+  const scanY=((frameCount*4)%H);
+  ctx.strokeStyle=`rgba(255,255,255,0.15)`;ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(bx-4,scanY);ctx.lineTo(bx+4,scanY);ctx.stroke();
+  ctx.restore();
+}
+
+function drawAlien(a){
+  if(!a.alive)return;
+  ctx.save();ctx.translate(a.x+a.w/2,a.y+a.h/2);
+  const fl=frameCount-a.flashTick<6;
+  ctx.shadowColor=fl?'#fff':a.color;ctx.shadowBlur=fl?14:7;
+  ctx.strokeStyle=fl?'#fff':a.color;ctx.lineWidth=1.5;
+  const w2=a.w/2-2,h2=a.h/2-2;
+  ctx.strokeRect(-w2,-h2,w2*2,h2*2);
+  ctx.fillStyle=`${a.color}18`;ctx.fillRect(-w2,-h2,w2*2,h2*2);
+  ctx.font='bold 9.5px Share Tech Mono,monospace';
+  ctx.fillStyle=fl?'#fff':a.color;ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(a.code,0,0);
+  const leg=Math.sin(frameCount*0.18+a.animTick)>0?2:-2;
+  [[-w2,-h2+2,-w2-5,-h2-4+leg],[w2,-h2+2,w2+5,-h2-4-leg],
+   [-w2,h2-2,-w2-5,h2+4+leg],[w2,h2-2,w2+5,h2+4-leg]].forEach(([x1,y1,x2,y2])=>{
+    ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.strokeStyle=a.color;ctx.lineWidth=1;ctx.stroke();
+  });
+  ctx.restore();
+}
+
+function drawServer(s){
+  ctx.save();
+  s.damaged=Math.max(0,(s.damaged||0)-1);
+  const dead=s.hp===0,hp=s.hp/s.maxHp;
+  const col=dead?'#220000':hp>0.6?s.buff.color:hp>0.3?'#ffcc00':'#ff4444';
+  const shake=s.damaged>0?Math.sin(s.damaged*1.8)*1.8:0;
+  ctx.translate(shake,0);
+  ctx.strokeStyle=dead?'#330000':col;ctx.lineWidth=dead?1:1.5;
+  ctx.shadowColor=col;ctx.shadowBlur=dead?0:5;
+  ctx.strokeRect(s.x,s.y,s.w,s.h);
+  if(!dead){
+    ctx.fillStyle=`${col}12`;ctx.fillRect(s.x,s.y,s.w*hp,s.h);
+    for(let i=0;i<s.maxHp;i++){
+      ctx.fillStyle=i<s.hp?col:'#1a0000';ctx.fillRect(s.x+5+i*10,s.y+s.h-8,7,4);
+    }
+  }
+  ctx.font='7px Share Tech Mono,monospace';
+  ctx.fillStyle=dead?'#330000':col;ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(`SRV-0${s.id}`,s.x+s.w/2,s.y+10);
+  if(!dead){
+    ctx.font='9px Share Tech Mono,monospace';ctx.fillStyle=col;
+    ctx.fillText(`${s.buff.icon} ${s.buff.id.toUpperCase()}`,s.x+s.w/2,s.y+24);
+    const led=(frameCount%30<15)?col:'#001100';
+    ctx.fillStyle=led;ctx.fillRect(s.x+s.w-8,s.y+5,4,4);
+  } else {
+    ctx.font='7px Share Tech Mono,monospace';ctx.fillStyle='#440000';
+    ctx.fillText('OFFLINE',s.x+s.w/2,s.y+s.h/2);
+  }
+  ctx.restore();
+}
+
+function drawBullet(b){
+  ctx.save();
+  if(b.type==='player'){
+    const th=b.thickness||2;
+    ctx.strokeStyle='#00ffcc';ctx.lineWidth=th;ctx.shadowColor='#00ffcc';ctx.shadowBlur=8;
+    ctx.beginPath();ctx.moveTo(b.x,b.y);ctx.lineTo(b.x,b.y+12);ctx.stroke();
+  } else {
+    ctx.fillStyle=b.color||'#ff4444';ctx.shadowColor=b.color||'#ff4444';ctx.shadowBlur=6;
+    ctx.fillRect(b.x-2,b.y,4,12);
+  }
+  ctx.restore();
+}
+
+function spawnParticles(x,y,color,count){
+  for(let i=0;i<count;i++){
+    const ang=Math.random()*Math.PI*2,spd=0.5+Math.random()*3.5;
+    particles.push({x,y,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,
+      color,life:1,decay:0.035+Math.random()*0.04,size:1.5+Math.random()*3});
+  }
+}
+function spawnFloater(x,y,text,color){floaters.push({x,y,text,color,life:1,vy:-0.7});}
+
+function shootPlayer(){
+  if(activeBuffs.laser)return; // beam mode: no bullets
+  const cool=activeBuffs.rapid?4:18;
+  if(ship.shootCooldown>0)return;
+  ship.shootCooldown=cool;
+  const isTriple=!!activeBuffs.triple;
+  const thickness=activeBuffs.wide?20:2;
+  if(isTriple){
+    bullets.push({x:ship.x,y:ship.y-24,vy:-10,type:'player',thickness});
+    bullets.push({x:ship.x-12,y:ship.y-18,vy:-9,vx:-0.9,type:'player',thickness});
+    bullets.push({x:ship.x+12,y:ship.y-18,vy:-9,vx:0.9,type:'player',thickness});
+  } else {
+    bullets.push({x:ship.x,y:ship.y-24,vy:-10,type:'player',thickness});
+  }
+}
+
+function updateBeam(){
+  if(!activeBuffs.laser){beamActive=false;return;}
+  beamActive=!!(keys[' ']||keys['Space']);
+  if(!beamActive){beamHits=[];return;}
+  // every frame the beam is on, damage aliens in column
+  const bx=ship.x;
+  const aliveAliens=aliens.filter(a=>a.alive);
+  aliveAliens.forEach(a=>{
+    if(bx>a.x&&bx<a.x+a.w&&a.y<ship.y-26){
+      // find or create hit record
+      let rec=beamHits.find(h=>h===a);
+      if(!rec){
+        // new alien in beam — instant kill after BEAM_TICK_DAMAGE frames
+        a._beamTimer=(a._beamTimer||0)+1;
+      } else {a._beamTimer=(a._beamTimer||0)+1;}
+      a._beamTimer=(a._beamTimer||0)+1;
+      a.flashTick=frameCount;
+      if(a._beamTimer>BEAM_TICK_DAMAGE){
+        a.alive=false;a._beamTimer=0;
+        spawnParticles(a.x+a.w/2,a.y+a.h/2,a.color,16);
+        spawnBuff(a.x+a.w/2,a.y);
+        score+=Math.round(a.pts*(1+level*0.1));
+        document.getElementById('score-val').textContent=score;
+      }
+    } else {a._beamTimer=0;}
+  });
+}
+
+function alienShoot(){
+  const alive=aliens.filter(a=>a.alive);if(!alive.length)return;
+  const cols={};
+  alive.forEach(a=>{if(!cols[a.col]||a.y>cols[a.col].y)cols[a.col]=a;});
+  const shooters=Object.values(cols);
+  const s=shooters[Math.floor(Math.random()*shooters.length)];
+  alienBullets.push({x:s.x+s.w/2,y:s.y+s.h,vy:2.8+level*0.25,type:'alien',color:s.color});
+}
+
+function activateBuff(bt){
+  if(activeBuffs[bt.id])clearTimeout(activeBuffs[bt.id].timer);
+  const timer=bt.duration>0?setTimeout(()=>{delete activeBuffs[bt.id];if(bt.id==='laser')beamActive=false;updateBuffsUI();},bt.duration):null;
+  activeBuffs[bt.id]={timer,label:bt.label,color:bt.color,end:bt.duration>0?Date.now()+bt.duration:null};
+  spawnFloater(ship.x,ship.y-30,bt.label,bt.color);
+  updateBuffsUI();
+}
+
+function serverDies(s){
+  spawnParticles(s.x+s.w/2,s.y+s.h/2,'#ff4444',25);
+  spawnFloater(s.x+s.w/2,s.y-10,`${s.buff.icon} ${s.buff.label} LOST`,'#ff4444');
+  updateSrvLegend();updateBuffsUI();
+}
+
+function updateBuffsUI(){
+  const bar=document.getElementById('buffs-display');bar.innerHTML='';
+  const pool=getAvailableBuffPool();
+  const poolDiv=document.createElement('div');
+  poolDiv.style.cssText='font-family:Share Tech Mono,monospace;font-size:8px;color:#1a4a1a;margin-right:6px;align-self:center';
+  poolDiv.textContent=`POOL[${pool.length}]:`;bar.appendChild(poolDiv);
+  if(!pool.length){
+    const d=document.createElement('div');
+    d.style.cssText='font-family:Share Tech Mono,monospace;font-size:9px;color:#440000';
+    d.textContent='NO BUFFS — ALL SERVERS OFFLINE';bar.appendChild(d);
+  } else {
+    pool.forEach(bt=>{
+      const p=document.createElement('span');
+      p.style.cssText=`color:${bt.color};font-size:10px;opacity:0.4;margin-right:3px`;
+      p.textContent=bt.icon;bar.appendChild(p);
+    });
+  }
+  if(Object.keys(activeBuffs).length){
+    const sep=document.createElement('div');
+    sep.style.cssText='width:1px;background:#0a2a0a;align-self:stretch;margin:0 6px';
+    bar.appendChild(sep);
+    Object.values(activeBuffs).forEach(b=>{
+      const pill=document.createElement('div');pill.className='buff-pill';
+      pill.style.borderColor=b.color;pill.style.color=b.color;
+      const rem=b.end?Math.max(0,Math.ceil((b.end-Date.now())/1000)):'';
+      pill.textContent=b.label+(rem!==''?` ${rem}s`:'');bar.appendChild(pill);
+    });
+  }
+  // laser beam indicator
+  if(activeBuffs.laser){
+    const ind=document.createElement('div');
+    ind.style.cssText=`font-family:Share Tech Mono,monospace;font-size:9px;color:#ff44ff;margin-left:4px`;
+    ind.textContent=beamActive?'[BEAM ON]':'[HOLD SPC]';bar.appendChild(ind);
+  }
+}
+
+function update(){
+  if(gameState!=='playing')return;
+  frameCount++;
+  if(ship.shootCooldown>0)ship.shootCooldown--;
+  if(invincibleTimer>0)invincibleTimer--;
+  if(keys['ArrowLeft']||keys['a']||keys['A'])ship.x=Math.max(20,ship.x-ship.speed);
+  if(keys['ArrowRight']||keys['d']||keys['D'])ship.x=Math.min(W-20,ship.x+ship.speed);
+  if(keys[' ']||keys['Space']){
+    if(activeBuffs.laser) {/* beam handled below */} else shootPlayer();
+  }
+  updateBeam();
+  const aliveAliens=aliens.filter(a=>a.alive);
+  const speedMult=activeBuffs.slow?0.28:1;
+  let hitWall=false;
+  aliveAliens.forEach(a=>{
+    a.animTick++;a.x+=alienDir*alienSpeed*speedMult;
+    if(a.x+a.w>=W-8||a.x<=8)hitWall=true;
+  });
+  if(hitWall&&aliveAliens.length){
+    alienDir*=-1;
+    const drop=Math.max(10,30-(level*1.5));
+    aliveAliens.forEach(a=>a.y+=drop);
+  }
+  alienShootTimer++;
+  const shootRate=Math.max(30,110-level*7);
+  if(alienShootTimer>shootRate){alienShoot();alienShootTimer=0;}
+  bullets.forEach(b=>{b.y+=b.vy;if(b.vx)b.x+=b.vx;});
+  alienBullets.forEach(b=>b.y+=b.vy);
+  bullets=bullets.filter(b=>b.y>-30&&b.y<H+10&&b.x>-10&&b.x<W+10);
+  bullets.forEach(b=>{
+    if(b.type!=='player')return;
+    aliveAliens.forEach(a=>{
+      if(!a.alive||b.dead)return;
+      const half=(b.thickness||2)/2;
+      if(b.x+half>a.x&&b.x-half<a.x+a.w&&b.y>a.y&&b.y<a.y+a.h){
+        b.dead=true;a.alive=false;a.flashTick=frameCount;
+        spawnParticles(a.x+a.w/2,a.y+a.h/2,a.color,16);
+        spawnBuff(a.x+a.w/2,a.y);
+        score+=Math.round(a.pts*(1+level*0.1));
+        document.getElementById('score-val').textContent=score;
+      }
+    });
+  });
+  bullets=bullets.filter(b=>!b.dead);
+  if(invincibleTimer===0){
+    alienBullets=alienBullets.filter(b=>{
+      if(b.y>H+10)return false;
+      if(b.y>ship.y-28&&b.y<ship.y+28&&b.x>ship.x-22&&b.x<ship.x+22){
+        if(!activeBuffs.shield){
+          lives--;updateLivesUI();spawnParticles(ship.x,ship.y,'#ff4444',22);
+          invincibleTimer=90;ship.x=W/2;if(lives<=0){endGame();return false;}
+        }
+        return false;
+      }
+      let hit=false;
+      servers.forEach(s=>{
+        if(hit)return;
+        if(b.y>s.y-2&&b.y<s.y+s.h+2&&b.x>s.x&&b.x<s.x+s.w&&s.hp>0){
+          s.hp--;s.damaged=15;spawnParticles(s.x+s.w/2,s.y,'#ff8800',8);
+          if(s.hp===0)serverDies(s);
+          hit=true;b.dead=true;
+        }
+      });
+      return !b.dead&&b.y<H+10;
+    });
+  } else {alienBullets=alienBullets.filter(b=>b.y<H+10);}
+  aliveAliens.forEach(a=>{
+    if(a.y+a.h>=H-50){
+      servers.forEach(s=>{
+        if(a.x+a.w>s.x&&a.x<s.x+s.w&&s.hp>0){
+          s.hp=0;s.damaged=20;a.alive=false;serverDies(s);
+        }
+      });
+      if(a.y+a.h>=H-36&&invincibleTimer===0&&!activeBuffs.shield){
+        lives--;updateLivesUI();a.alive=false;
+        spawnParticles(ship.x,ship.y,'#ff0000',18);invincibleTimer=90;
+        if(lives<=0){endGame();return;}
+      } else if(a.y+a.h>=H-36){a.alive=false;}
+    }
+  });
+  buffs=buffs.filter(bf=>{
+    bf.y+=bf.vy;
+    if(bf.x>ship.x-24&&bf.x+bf.w<ship.x+24&&bf.y>ship.y-28&&bf.y<ship.y+28){
+      activateBuff(bf.type);return false;
+    }
+    return bf.y<H;
+  });
+  particles=particles.filter(p=>{p.x+=p.vx;p.y+=p.vy;p.life-=p.decay;p.vy+=0.04;return p.life>0;});
+  floaters=floaters.filter(f=>{f.y+=f.vy;f.life-=0.012;return f.life>0;});
+  // wave cleared
+  if(gameState==='playing'&&!aliens.filter(a=>a.alive).length){
+    gameState='repair'; // prevent re-trigger
+    beamActive=false;
+    alienBullets=[];
+    setTimeout(()=>showRepairScreen(),400);
+  }
+  if(frameCount%60===0)updateBuffsUI();
+}
+
+function updateLivesUI(){
+  let html='';
+  for(let i=0;i<3;i++)html+=`<span style="color:${i<lives?'#ff4466':'#330011'};font-size:15px">♥</span>`;
+  document.getElementById('lives-val').innerHTML=html;
+}
+
+let stars=[];
+function initStars(){
+  stars=[];
+  for(let i=0;i<100;i++)stars.push({x:Math.random()*W,y:Math.random()*H,s:Math.random()*1.5+0.3,spd:0.08+Math.random()*0.25});
+}
+
+function draw(){
+  ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='rgba(0,255,100,0.025)';ctx.lineWidth=1;
+  for(let x=0;x<W;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=0;y<H;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+  stars.forEach(s=>{s.y+=s.spd;if(s.y>H)s.y=0;ctx.fillStyle=`rgba(255,255,255,${0.2+s.s*0.2})`;ctx.fillRect(s.x,s.y,s.s,s.s);});
+  ctx.strokeStyle='rgba(0,255,100,0.1)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(0,H-52);ctx.lineTo(W,H-52);ctx.stroke();
+  servers.forEach(drawServer);
+  aliens.forEach(drawAlien);
+  // draw beam BEHIND ship
+  drawBeam();
+  const shipAlpha=(invincibleTimer>0&&Math.floor(invincibleTimer/5)%2===0)?0.3:1;
+  drawShip(ship.x,ship.y,shipAlpha);
+  bullets.forEach(drawBullet);
+  alienBullets.forEach(drawBullet);
+  buffs.forEach(bf=>{
+    ctx.save();ctx.strokeStyle=bf.type.color;ctx.lineWidth=1.5;ctx.shadowColor=bf.type.color;ctx.shadowBlur=10;
+    ctx.fillStyle='rgba(0,0,0,0.85)';ctx.fillRect(bf.x,bf.y,bf.w,bf.h);ctx.strokeRect(bf.x,bf.y,bf.w,bf.h);
+    ctx.font='9px Share Tech Mono,monospace';ctx.fillStyle=bf.type.color;ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(bf.type.icon,bf.x+bf.w/2,bf.y+bf.h/2);ctx.restore();
+  });
+  particles.forEach(p=>{ctx.save();ctx.globalAlpha=p.life;ctx.fillStyle=p.color;ctx.fillRect(p.x-p.size/2,p.y-p.size/2,p.size,p.size);ctx.restore();});
+  floaters.forEach(f=>{
+    ctx.save();ctx.globalAlpha=f.life;ctx.font='bold 10px Share Tech Mono,monospace';
+    ctx.fillStyle=f.color;ctx.textAlign='center';ctx.textBaseline='middle';ctx.shadowColor=f.color;ctx.shadowBlur=8;
+    ctx.fillText(f.text,f.x,f.y);ctx.restore();
+  });
+  if(gameState==='playing'||gameState==='repair'){
+    ctx.font='9px Share Tech Mono,monospace';ctx.fillStyle='rgba(0,255,100,0.35)';
+    ctx.textAlign='right';ctx.fillText(`HOSTILES: ${aliens.filter(a=>a.alive).length}`,W-8,14);
+    ctx.textAlign='left';ctx.fillText(`SPD: ${alienSpeed.toFixed(2)}`,8,14);
+  }
+}
+
+function endGame(){
+  gameState='gameover';
+  document.getElementById('repair-screen').style.display='none';
+  const onlineSrvs=servers.filter(s=>s.hp>0).length;
+  const ov=document.getElementById('overlay');
+  ov.style.display='flex';
+  ov.innerHTML=`
+    <h1 style="color:#ff3333;font-family:Orbitron,monospace;font-size:24px;letter-spacing:3px">SYSTEM FAILURE</h1>
+    <p style="color:#ff8888;font-family:Share Tech Mono,monospace;font-size:11px;text-align:center;line-height:2">
+      SCORE FINAL: <span style="color:#00ffcc;font-size:18px;font-weight:bold">${score.toLocaleString()}</span><br>
+      NIVEL: <span style="color:#ffcc00">LVL ${level}</span> &nbsp;|&nbsp;
+      SERVERS ONLINE: <span style="color:${onlineSrvs>0?'#00ff88':'#ff4444'}">${onlineSrvs}/6</span><br>
+      BUFFS PERDIDOS: <span style="color:#ff6644">${6-onlineSrvs}</span>
+    </p>
+    <button class="main-btn" id="start-btn" style="margin-top:8px;border-color:#ff4444;color:#ff4444" onmouseover="this.style.background='#ff4444';this.style.color='#000'" onmouseout="this.style.background='#000';this.style.color='#ff4444'">↺ REBOOT SYSTEM</button>`;
+  document.getElementById('start-btn').addEventListener('click',startGame);
+}
+
+function startGame(){
+  score=0;lives=3;level=1;frameCount=0;invincibleTimer=0;beamActive=false;beamHits=[];
+  bullets=[];alienBullets=[];particles=[];buffs=[];activeBuffs={};floaters=[];
+  document.getElementById('score-val').textContent='0';
+  document.getElementById('level-val').textContent='1';
+  document.getElementById('buffs-display').innerHTML='';
+  document.getElementById('overlay').style.display='none';
+  document.getElementById('repair-screen').style.display='none';
+  updateLivesUI();initShip();initServers();initAliens(1);
+  gameState='playing';updateBuffsUI();
+}
+
+function loop(){requestAnimationFrame(loop);update();draw();}
+
+document.addEventListener('keydown',e=>{
+  keys[e.key]=true;keys[e.code]=true;
+  if(e.code==='Space')e.preventDefault();
+});
+document.addEventListener('keyup',e=>{keys[e.key]=false;keys[e.code]=false;});
+
+let touchStartX=null;
+canvas.addEventListener('touchstart',e=>{touchStartX=e.touches[0].clientX;e.preventDefault();},{passive:false});
+canvas.addEventListener('touchmove',e=>{
+  if(touchStartX===null)return;
+  ship.x=Math.max(20,Math.min(W-20,ship.x+(e.touches[0].clientX-touchStartX)*0.8));
+  touchStartX=e.touches[0].clientX;e.preventDefault();
+},{passive:false});
+canvas.addEventListener('touchend',e=>{
+  if(gameState==='playing'){if(!activeBuffs.laser)shootPlayer();else beamActive=!beamActive;}
+  touchStartX=null;e.preventDefault();
+},{passive:false});
+
+document.getElementById('start-btn').addEventListener('click',startGame);
+initStars();initShip();initServers();
+loop();
+</script>
+</body>
+</html>
