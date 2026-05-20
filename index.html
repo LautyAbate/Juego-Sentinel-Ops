@@ -10,7 +10,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;overflow:hidden}
+html{width:100%;height:100%;overflow:hidden;background:#000}
+body{width:100%;min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;overflow:hidden;touch-action:none;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;background:#000}
+
+/* ── SCALING WRAPPER ── */
+#scale-root{transform-origin:top center;width:680px;flex-shrink:0}
 #hud{display:flex;justify-content:space-between;align-items:center;width:680px;padding:6px 12px;background:#000;border:1px solid #0a2a0a;border-bottom:none}
 .hud-item{color:#0f0;font-family:'Orbitron',monospace;font-size:11px;letter-spacing:1px}
 .hud-item span{color:#00ffcc;font-size:13px;font-weight:700}
@@ -19,43 +23,29 @@ body{background:#000;display:flex;flex-direction:column;align-items:center;justi
 .buff-pill{border:1px solid;font-family:'Share Tech Mono',monospace;font-size:9px;padding:1px 7px;border-radius:2px;background:#000}
 #game-container{position:relative}
 canvas{display:block;background:#000;image-rendering:pixelated;border:1px solid #0a2a0a}
+#srv-legend{width:680px;display:flex;background:#000;border:1px solid #0a2a0a;border-top:none}
+.sl-item{flex:1;font-family:'Share Tech Mono',monospace;font-size:8px;padding:3px 4px;text-align:center;border-right:1px solid #0a2a0a}
+.sl-item:last-child{border-right:none}
+
+/* ── OVERLAYS ── */
 #overlay{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:rgba(0,0,0,0.93)}
 #overlay h1{color:#00ffcc;font-family:'Orbitron',monospace;font-size:26px;letter-spacing:4px;text-shadow:0 0 20px rgba(0,255,200,0.5)}
 #overlay .sub{color:#22ff99;font-family:'Share Tech Mono',monospace;font-size:10px;text-align:center;max-width:380px;line-height:1.9}
 #overlay .controls{color:#44ffcc;font-family:'Share Tech Mono',monospace;font-size:10px;text-align:center;line-height:1.9;border:1px solid #0f4428;padding:8px 18px}
 #overlay button.main-btn{background:#000;border:1px solid #00ffcc;color:#00ffcc;font-family:'Orbitron',monospace;font-size:12px;padding:10px 32px;cursor:pointer;letter-spacing:3px;margin-top:4px;transition:all 0.15s}
 #overlay button.main-btn:hover{background:#00ffcc;color:#000}
-#srv-legend{width:680px;display:flex;gap:0;background:#000;border:1px solid #0a2a0a;border-top:none}
-.sl-item{flex:1;font-family:'Share Tech Mono',monospace;font-size:8px;padding:3px 4px;text-align:center;border-right:1px solid #0a2a0a}
-.sl-item:last-child{border-right:none}
-.hud-item,
-#overlay h1,
-#overlay .sub,
-#overlay .controls,
-#overlay button.main-btn,
-#repair-screen h2,
-#repair-screen .rs-sub,
-#repair-screen .skip-btn,
-#buffs-display,
-.buff-pill,
-.sl-item,
-.srv-card{text-shadow:0 0 6px currentColor}
-/* pause overlay */
 #pause-overlay{position:absolute;top:0;left:0;width:100%;height:100%;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(0,0,0,0.82);pointer-events:none}
 #pause-overlay h2{color:#00ffcc;font-family:'Orbitron',monospace;font-size:32px;letter-spacing:8px;text-shadow:0 0 24px rgba(0,255,200,0.7);animation:pauseBlink 1.2s ease-in-out infinite}
 #pause-overlay p{color:#33cc88;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px}
 @keyframes pauseBlink{0%,100%{opacity:1}50%{opacity:0.35}}
 @keyframes newRecord{0%,100%{opacity:1;color:#ffcc00}50%{opacity:0.5;color:#ff8800}}
-/* repair screen */
 #repair-screen{position:absolute;top:0;left:0;width:100%;height:100%;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(0,0,0,0.95)}
 #repair-screen h2{color:#00ffcc;font-family:'Orbitron',monospace;font-size:16px;letter-spacing:3px}
 #repair-screen .rs-sub{color:#33cc88;font-family:'Share Tech Mono',monospace;font-size:10px;text-align:center;margin-top:-6px}
 #srv-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:460px}
 .srv-card{background:#000;border:1px solid #0a2a0a;padding:10px 12px;font-family:'Share Tech Mono',monospace;font-size:9px;cursor:pointer;transition:all 0.15s;text-align:center}
-.srv-card.dead{border-color:#330000;cursor:pointer}
-.srv-card.dead:hover{border-color:#ff4444;background:#0e0000}
-.srv-card.alive{border-color:#ffcc44;cursor:pointer;opacity:0.9}
-.srv-card.alive:hover{border-color:#ffee66;background:#0c0a00}
+.srv-card.dead{border-color:#330000}.srv-card.dead:hover{border-color:#ff4444;background:#0e0000}
+.srv-card.alive{border-color:#ffcc44;opacity:0.9}.srv-card.alive:hover{border-color:#ffee66;background:#0c0a00}
 .srv-card.full{border-color:#44ccff;cursor:not-allowed;opacity:0.4}
 .srv-card .sc-name{font-family:'Orbitron',monospace;font-size:10px;letter-spacing:1px;margin-bottom:4px}
 .srv-card .sc-status{font-size:8px;margin-top:4px}
@@ -63,84 +53,103 @@ canvas{display:block;background:#000;image-rendering:pixelated;border:1px solid 
 .srv-card .pip{width:12px;height:5px;border-radius:1px}
 #repair-screen .skip-btn{background:#000;border:1px solid #2a7a2a;color:#4fdc4f;font-family:'Share Tech Mono',monospace;font-size:10px;padding:6px 18px;cursor:pointer;letter-spacing:1px;margin-top:4px}
 #repair-screen .skip-btn:hover{border-color:#55ff88;color:#55ff88}
+.hud-item,.sl-item,.buff-pill,#overlay h1,#overlay .sub,#overlay .controls,#overlay button.main-btn,#repair-screen h2,#repair-screen .rs-sub,#repair-screen .skip-btn,.srv-card{text-shadow:0 0 6px currentColor}
 
-/* ─── MOBILE RESPONSIVE ─────────────────────────────────────── */
-html,body{touch-action:none;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
-#game-wrapper{display:flex;flex-direction:column;align-items:center;width:100%;transform-origin:top center}
-#hud,#buffs-display,#srv-legend{transition:width 0.1s}
-/* virtual controls */
-#vcontrols{display:none;width:100%;background:#000;border-top:1px solid #0a2a0a;padding:8px 10px;box-sizing:border-box}
-#vcontrols-inner{display:flex;justify-content:space-between;align-items:center;max-width:680px;margin:0 auto}
-.vbtn{background:#000;border:1px solid #0a3a0a;color:#00ffcc;font-family:'Share Tech Mono',monospace;font-size:11px;padding:0;border-radius:4px;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:none;display:flex;align-items:center;justify-content:center;transition:background 0.05s,border-color 0.05s}
-.vbtn:active,.vbtn.pressed{background:#0a2a0a;border-color:#00ffcc}
-#btn-left{width:72px;height:56px;font-size:22px}
-#btn-right{width:72px;height:56px;font-size:22px}
-#btn-fire{width:90px;height:56px;font-size:20px;border-color:#00ffcc}
+/* ── VIRTUAL CONTROLS (always in DOM, shown via flex when mobile) ── */
+#vcontrols{
+  display:none;
+  width:100%;
+  background:#000;
+  border-top:1px solid #0a2a0a;
+  padding:10px 16px;
+  flex-shrink:0;
+}
+#vcontrols-row{display:flex;justify-content:space-between;align-items:center;gap:8px;max-width:680px;margin:0 auto}
+.vbtn{
+  background:#000;
+  border:2px solid #0a3a0a;
+  color:#00ffcc;
+  font-family:'Share Tech Mono',monospace;
+  border-radius:6px;
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  -webkit-tap-highlight-color:transparent;
+  touch-action:none;
+  transition:background 0.05s,border-color 0.05s;
+  -webkit-user-select:none;user-select:none;
+}
+.vbtn.pressed{background:#0a2a0a;border-color:#00ffcc}
+#btn-left,#btn-right{width:72px;height:64px;font-size:26px}
+#btn-fire{width:100px;height:64px;font-size:13px;font-family:'Orbitron',monospace;border-color:#00ffcc;letter-spacing:1px;flex-direction:column;gap:2px}
+#btn-fire .fire-icon{font-size:20px}
 #btn-fire.beam-mode{border-color:#ff44ff;color:#ff44ff}
 #btn-fire.beam-mode.pressed{background:#1a001a}
-#btn-pause-m{width:52px;height:40px;font-size:14px;border-color:#0a3a0a;color:#33cc88;align-self:center}
-.dpad{display:flex;gap:6px;align-items:center}
+#btn-pause-m{width:56px;height:48px;font-size:18px;color:#33cc88;border-color:#0a3a0a;align-self:center}
+.dpad{display:flex;gap:10px}
+
+/* show controls on mobile */
 @media(max-width:700px){
   #vcontrols{display:block}
-  body{justify-content:flex-start;padding-top:0}
+  body{justify-content:flex-start}
 }
 </style>
 </head>
 <body>
-<div id="game-wrapper">
-<div id="hud">
-  <div class="hud-item">SCORE: <span id="score-val">0</span></div>
-  <div style="color:#00ffcc;font-family:'Orbitron',monospace;font-size:14px;font-weight:900;letter-spacing:3px">SERVER INVADERS</div>
-  <div class="hud-item hud-hi">HI: <span id="hi-val">0</span></div>
-  <div class="hud-item">LVL <span id="level-val">1</span> &nbsp; <span id="lives-val">♥ ♥ ♥</span></div>
-</div>
-<div id="buffs-display"></div>
-<div id="game-container">
-  <canvas id="gc" width="680" height="520"></canvas>
 
-  <!-- MENU / GAME OVER -->
-  <div id="overlay">
-    <h1>SERVER INVADERS</h1>
-    <p class="sub">
-      Los aliens son códigos de error HTTP.<br>
-      Cada servidor provee un buff específico.<br>
-      <span style="color:#ff4444">Si un servidor muere → ese buff desaparece.</span><br>
-      <span style="color:#00ffcc">Al limpiar una oleada podés reparar un servidor.</span><br>
-    </p>
-    <div class="controls">
-      ← → &nbsp; Mover &nbsp;|&nbsp; ESPACIO &nbsp; Disparar &nbsp;|&nbsp; ESC &nbsp; Pausa
+<div id="scale-root">
+  <div id="hud">
+    <div class="hud-item">SCORE: <span id="score-val">0</span></div>
+    <div style="color:#00ffcc;font-family:'Orbitron',monospace;font-size:14px;font-weight:900;letter-spacing:3px">SERVER INVADERS</div>
+    <div class="hud-item hud-hi">HI: <span id="hi-val">0</span></div>
+    <div class="hud-item">LVL <span id="level-val">1</span> &nbsp; <span id="lives-val">&#9829; &#9829; &#9829;</span></div>
+  </div>
+  <div id="buffs-display"></div>
+  <div id="game-container">
+    <canvas id="gc" width="680" height="520"></canvas>
+    <div id="overlay">
+      <h1>SERVER INVADERS</h1>
+      <p class="sub">
+        Los aliens son c&#243;digos de error HTTP.<br>
+        Cada servidor provee un buff espec&#237;fico.<br>
+        <span style="color:#ff4444">Si un servidor muere &#8594; ese buff desaparece.</span><br>
+        <span style="color:#00ffcc">Al limpiar una oleada pod&#233;s reparar un servidor.</span><br>
+      </p>
+      <div class="controls">
+        &#8592; &#8594; Mover &nbsp;|&nbsp; ESPACIO Disparar &nbsp;|&nbsp; ESC Pausa
+      </div>
+      <button class="main-btn" id="start-btn">&#9654; BOOT SYSTEM</button>
     </div>
-    <button class="main-btn" id="start-btn">▶ BOOT SYSTEM</button>
+    <div id="pause-overlay">
+      <h2>PAUSED</h2>
+      <p>&#8212; ESC / PAUSA PARA CONTINUAR &#8212;</p>
+    </div>
+    <div id="repair-screen">
+      <h2>WAVE CLEARED</h2>
+      <p class="rs-sub" id="repair-sub">Eleg&#237; un servidor para reparar o curar</p>
+      <div id="srv-grid"></div>
+      <button class="skip-btn" id="skip-repair-btn">&#9654; CONTINUAR SIN REPARAR</button>
+    </div>
   </div>
+  <div id="srv-legend"></div>
+</div><!-- /scale-root -->
 
-  <!-- PAUSE OVERLAY -->
-  <div id="pause-overlay">
-    <h2>PAUSED</h2>
-    <p>— ESC PARA CONTINUAR —</p>
-  </div>
-
-  <!-- REPAIR SCREEN (entre waves) -->
-  <div id="repair-screen">
-    <h2>WAVE CLEARED</h2>
-    <p class="rs-sub" id="repair-sub">Elegí un servidor para reparar o curar</p>
-    <div id="srv-grid"></div>
-    <button class="skip-btn" id="skip-repair-btn">▶ CONTINUAR SIN REPARAR</button>
-  </div>
-</div>
-<div id="srv-legend"></div>
-</div><!-- /game-wrapper -->
+<!-- VIRTUAL CONTROLS: outside scale-root so they're not scaled down -->
 <div id="vcontrols">
-  <div id="vcontrols-inner">
+  <div id="vcontrols-row">
     <div class="dpad">
       <button class="vbtn" id="btn-left">&#8592;</button>
       <button class="vbtn" id="btn-right">&#8594;</button>
     </div>
-    <button class="vbtn" id="btn-fire">&#9654; FIRE</button>
-    <button class="vbtn" id="btn-pause-m">&#9646;&#9646; PAUSE</button>
+    <button class="vbtn" id="btn-fire">
+      <span class="fire-icon">&#9654;</span>
+      <span>FIRE</span>
+    </button>
+    <button class="vbtn" id="btn-pause-m">&#9646;&#9646;</button>
   </div>
 </div>
 
 <script>
+
 const canvas=document.getElementById('gc');
 const ctx=canvas.getContext('2d');
 const W=680,H=520;
@@ -710,89 +719,78 @@ document.addEventListener('keydown',e=>{
 });
 document.addEventListener('keyup',e=>{keys[e.key]=false;keys[e.code]=false;});
 
-let touchStartX=null;
-canvas.addEventListener('touchstart',e=>{touchStartX=e.touches[0].clientX;e.preventDefault();},{passive:false});
-canvas.addEventListener('touchmove',e=>{
-  if(touchStartX===null||gameState==='paused')return;
-  ship.x=Math.max(20,Math.min(W-20,ship.x+(e.touches[0].clientX-touchStartX)*0.8));
-  touchStartX=e.touches[0].clientX;e.preventDefault();
-},{passive:false});
-canvas.addEventListener('touchend',e=>{
-  if(gameState==='playing'){if(!activeBuffs.laser)shootPlayer();else beamActive=!beamActive;}
-  touchStartX=null;e.preventDefault();
-},{passive:false});
 
-document.getElementById('start-btn').addEventListener('click',startGame);
-initStars();initShip();initServers();
-
-// ─── RESPONSIVE SCALING ──────────────────────────────────────
+// ─── SCALING ──────────────────────────────────────────────────────
 function scaleGame(){
-  const isMobile=window.innerWidth<=700;
-  const maxW=isMobile?window.innerWidth:680;
-  const scale=Math.min(1,maxW/680);
-  const wrapper=document.getElementById('game-wrapper');
-  wrapper.style.transform=`scale(${scale})`;
-  wrapper.style.width=(680)+'px';
-  // compensate height so wrapper doesn't leave dead space
-  const scaledH=wrapper.offsetHeight*scale;
-  wrapper.style.marginBottom=`${(wrapper.offsetHeight-scaledH)}px`;
-  document.getElementById('vcontrols').style.marginTop=isMobile?'0':'0';
+  const root=document.getElementById('scale-root');
+  const avail=window.innerWidth;
+  const scale=Math.min(1, avail/680);
+  root.style.transform=`scale(${scale})`;
+  // shrink the visual footprint so vcontrols isn't pushed off screen
+  const naturalH=root.offsetHeight;
+  root.style.marginBottom=`-${naturalH*(1-scale)}px`;
 }
-window.addEventListener('resize',scaleGame);
+window.addEventListener('resize', scaleGame);
+window.addEventListener('orientationchange', ()=>setTimeout(scaleGame,100));
 scaleGame();
 
-// ─── VIRTUAL CONTROLS ────────────────────────────────────────
-const btnLeft=document.getElementById('btn-left');
-const btnRight=document.getElementById('btn-right');
-const btnFire=document.getElementById('btn-fire');
-const btnPauseM=document.getElementById('btn-pause-m');
+// ─── VIRTUAL CONTROLS ─────────────────────────────────────────────
+const btnLeft  = document.getElementById('btn-left');
+const btnRight = document.getElementById('btn-right');
+const btnFire  = document.getElementById('btn-fire');
+const btnPauseM= document.getElementById('btn-pause-m');
 
-function setPressed(el,val){
-  if(val)el.classList.add('pressed');
-  else el.classList.remove('pressed');
+function pressed(el, on){
+  on ? el.classList.add('pressed') : el.classList.remove('pressed');
 }
 
-// Left button
-btnLeft.addEventListener('touchstart',e=>{e.preventDefault();keys['ArrowLeft']=true;setPressed(btnLeft,true);},{passive:false});
-btnLeft.addEventListener('touchend',e=>{e.preventDefault();keys['ArrowLeft']=false;setPressed(btnLeft,false);},{passive:false});
-btnLeft.addEventListener('touchcancel',e=>{keys['ArrowLeft']=false;setPressed(btnLeft,false);});
+// Left
+btnLeft.addEventListener('touchstart', e=>{e.preventDefault(); keys['ArrowLeft']=true;  pressed(btnLeft,true); }, {passive:false});
+btnLeft.addEventListener('touchend',   e=>{e.preventDefault(); keys['ArrowLeft']=false; pressed(btnLeft,false);}, {passive:false});
+btnLeft.addEventListener('touchcancel',()=>{ keys['ArrowLeft']=false; pressed(btnLeft,false); });
 
-// Right button
-btnRight.addEventListener('touchstart',e=>{e.preventDefault();keys['ArrowRight']=true;setPressed(btnRight,true);},{passive:false});
-btnRight.addEventListener('touchend',e=>{e.preventDefault();keys['ArrowRight']=false;setPressed(btnRight,false);},{passive:false});
-btnRight.addEventListener('touchcancel',e=>{keys['ArrowRight']=false;setPressed(btnRight,false);});
+// Right
+btnRight.addEventListener('touchstart', e=>{e.preventDefault(); keys['ArrowRight']=true;  pressed(btnRight,true); }, {passive:false});
+btnRight.addEventListener('touchend',   e=>{e.preventDefault(); keys['ArrowRight']=false; pressed(btnRight,false);}, {passive:false});
+btnRight.addEventListener('touchcancel',()=>{ keys['ArrowRight']=false; pressed(btnRight,false); });
 
-// Fire/Beam button
-function updateFireBtn(){
-  if(activeBuffs.laser){btnFire.classList.add('beam-mode');btnFire.textContent='\u2550 BEAM';}
-  else{btnFire.classList.remove('beam-mode');btnFire.innerHTML='&#9654; FIRE';}
-}
-btnFire.addEventListener('touchstart',e=>{
-  e.preventDefault();setPressed(btnFire,true);
-  if(gameState==='playing'){
-    if(activeBuffs.laser){keys[' ']=true;}
-    else{shootPlayer();}
+// Fire / Beam
+function refreshFireBtn(){
+  const icon=btnFire.querySelector('.fire-icon');
+  if(activeBuffs.laser){
+    btnFire.classList.add('beam-mode');
+    if(icon) icon.textContent='\u2550';
+    btnFire.querySelector('span:last-child').textContent='BEAM';
+  } else {
+    btnFire.classList.remove('beam-mode');
+    if(icon) icon.textContent='\u25b6';
+    btnFire.querySelector('span:last-child').textContent='FIRE';
   }
-},{passive:false});
-btnFire.addEventListener('touchend',e=>{
-  e.preventDefault();setPressed(btnFire,false);
-  if(activeBuffs.laser)keys[' ']=false;
-},{passive:false});
-btnFire.addEventListener('touchcancel',e=>{setPressed(btnFire,false);keys[' ']=false;});
+}
+btnFire.addEventListener('touchstart', e=>{
+  e.preventDefault(); pressed(btnFire,true);
+  if(gameState!=='playing') return;
+  if(activeBuffs.laser){ keys[' ']=true; beamActive=true; }
+  else shootPlayer();
+}, {passive:false});
+btnFire.addEventListener('touchend', e=>{
+  e.preventDefault(); pressed(btnFire,false);
+  keys[' ']=false;
+}, {passive:false});
+btnFire.addEventListener('touchcancel', ()=>{ pressed(btnFire,false); keys[' ']=false; });
 
-// Pause button
-btnPauseM.addEventListener('touchstart',e=>{
+// Pause mobile
+btnPauseM.addEventListener('touchstart', e=>{
   e.preventDefault();
-  if(gameState==='playing'||gameState==='paused')togglePause();
-},{passive:false});
+  if(gameState==='playing'||gameState==='paused') togglePause();
+}, {passive:false});
 
-// Update fire btn style when buffs change (hook into updateBuffsUI)
-const _origUpdateBuffsUI=updateBuffsUI;
-// We patch it inline after definition — use a polling approach instead
-setInterval(updateFireBtn,500);
+// Refresh fire btn periodically (buff state can change)
+setInterval(refreshFireBtn, 400);
 
-// Prevent all default touch on canvas (already handled)
-document.addEventListener('touchmove',e=>{if(e.target!==canvas)e.preventDefault();},{passive:false});
+// Block scroll/zoom everywhere
+document.addEventListener('touchmove', e=>e.preventDefault(), {passive:false});
+document.addEventListener('gesturestart', e=>e.preventDefault(), {passive:false});
 
 loop();
 </script>
