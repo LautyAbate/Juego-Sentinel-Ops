@@ -37,13 +37,11 @@ canvas{display:block;background:#000;image-rendering:pixelated;border:1px solid 
 .buff-pill,
 .sl-item,
 .srv-card{text-shadow:0 0 6px currentColor}
-/* pause overlay */
 #pause-overlay{position:absolute;top:0;left:0;width:100%;height:100%;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(0,0,0,0.82);pointer-events:none}
 #pause-overlay h2{color:#00ffcc;font-family:'Orbitron',monospace;font-size:32px;letter-spacing:8px;text-shadow:0 0 24px rgba(0,255,200,0.7);animation:pauseBlink 1.2s ease-in-out infinite}
 #pause-overlay p{color:#33cc88;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px}
 @keyframes pauseBlink{0%,100%{opacity:1}50%{opacity:0.35}}
 @keyframes newRecord{0%,100%{opacity:1;color:#ffcc00}50%{opacity:0.5;color:#ff8800}}
-/* repair screen */
 #repair-screen{position:absolute;top:0;left:0;width:100%;height:100%;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(0,0,0,0.95)}
 #repair-screen h2{color:#00ffcc;font-family:'Orbitron',monospace;font-size:16px;letter-spacing:3px}
 #repair-screen .rs-sub{color:#33cc88;font-family:'Share Tech Mono',monospace;font-size:10px;text-align:center;margin-top:-6px}
@@ -60,6 +58,50 @@ canvas{display:block;background:#000;image-rendering:pixelated;border:1px solid 
 .srv-card .pip{width:12px;height:5px;border-radius:1px}
 #repair-screen .skip-btn{background:#000;border:1px solid #2a7a2a;color:#4fdc4f;font-family:'Share Tech Mono',monospace;font-size:10px;padding:6px 18px;cursor:pointer;letter-spacing:1px;margin-top:4px}
 #repair-screen .skip-btn:hover{border-color:#55ff88;color:#55ff88}
+
+/* ── KONAMI EASTER EGG ─────────────────────────────────────────── */
+#konami-overlay{
+  position:fixed;top:0;left:0;width:100%;height:100%;
+  background:rgba(0,0,0,0.85);
+  display:none;
+  align-items:center;justify-content:center;
+  z-index:9999;
+  cursor:pointer;
+}
+#konami-overlay.visible{display:flex;}
+#konami-box{
+  display:flex;flex-direction:column;align-items:center;gap:12px;
+  pointer-events:none;
+  animation:konamiAppear 0.35s cubic-bezier(0.175,0.885,0.32,1.275) forwards;
+}
+#konami-overlay img{
+  width:280px;height:280px;
+  image-rendering:pixelated;
+  border:2px solid #ff88cc;
+  box-shadow:0 0 30px #ff44aa, 0 0 80px rgba(255,68,170,0.3);
+  animation:konamilevitate 2.2s ease-in-out infinite;
+}
+#konami-label{
+  font-family:'Orbitron',monospace;
+  font-size:12px;
+  color:#ff88cc;
+  letter-spacing:4px;
+  text-shadow:0 0 12px #ff44aa, 0 0 24px rgba(255,68,170,0.5);
+}
+#konami-hint{
+  font-family:'Share Tech Mono',monospace;
+  font-size:9px;
+  color:rgba(255,136,204,0.45);
+  letter-spacing:2px;
+}
+@keyframes konamilevitate{
+  0%,100%{transform:translateY(0);}
+  50%{transform:translateY(-10px);}
+}
+@keyframes konamiAppear{
+  from{opacity:0;transform:scale(0.6) rotate(-4deg);}
+  to{opacity:1;transform:scale(1) rotate(0deg);}
+}
 </style>
 </head>
 <body>
@@ -72,8 +114,6 @@ canvas{display:block;background:#000;image-rendering:pixelated;border:1px solid 
 <div id="buffs-display"></div>
 <div id="game-container">
   <canvas id="gc" width="680" height="520"></canvas>
-
-  <!-- MENU / GAME OVER -->
   <div id="overlay">
     <h1>SERVER INVADERS</h1>
     <p class="sub">
@@ -87,14 +127,10 @@ canvas{display:block;background:#000;image-rendering:pixelated;border:1px solid 
     </div>
     <button class="main-btn" id="start-btn">▶ BOOT SYSTEM</button>
   </div>
-
-  <!-- PAUSE OVERLAY -->
   <div id="pause-overlay">
     <h2>PAUSED</h2>
     <p>— ESC PARA CONTINUAR —</p>
   </div>
-
-  <!-- REPAIR SCREEN (entre waves) -->
   <div id="repair-screen">
     <h2>WAVE CLEARED</h2>
     <p class="rs-sub" id="repair-sub">Elegí un servidor para reparar o curar</p>
@@ -104,11 +140,20 @@ canvas{display:block;background:#000;image-rendering:pixelated;border:1px solid 
 </div>
 <div id="srv-legend"></div>
 
+<!-- KONAMI EASTER EGG -->
+<div id="konami-overlay">
+  <div id="konami-box">
+    <img src="https://tenor.com/view/niko-spinning-oneshot-niko-niko-oneshot-sphere-gif-1117672549449082247" alt="niko">
+    <div id="konami-label">✦ NIKO MODE ACTIVATED ✦</div>
+    <div id="konami-hint">— click para cerrar —</div>
+  </div>
+</div>
+
 <script>
 const canvas=document.getElementById('gc');
 const ctx=canvas.getContext('2d');
 const W=680,H=520;
-let gameState='menu'; // menu | playing | repair | gameover | paused
+let gameState='menu';
 let score=0,lives=3,level=1,frameCount=0;
 let ship,bullets=[],aliens=[],alienBullets=[],particles=[],buffs=[],activeBuffs={},servers=[];
 let keys={};
@@ -119,16 +164,11 @@ let floaters=[];
 let beamActive=false,beamHits=[],beamCooldownTimer=0;
 const BEAM_TICK_DAMAGE=6;
 
-// ─── HIGH SCORE ───────────────────────────────────────────────────
 let highScore=parseInt(localStorage.getItem('srv_invaders_hs')||'0');
 document.getElementById('hi-val').textContent=highScore.toLocaleString();
 
 function updateHighScore(){
-  if(score>highScore){
-    highScore=score;
-    localStorage.setItem('srv_invaders_hs',highScore);
-    document.getElementById('hi-val').textContent=highScore.toLocaleString();
-  }
+  if(score>highScore){highScore=score;localStorage.setItem('srv_invaders_hs',highScore);document.getElementById('hi-val').textContent=highScore.toLocaleString();}
 }
 
 const ERROR_CODES=[
@@ -200,32 +240,21 @@ function initAliens(lvl){
   alienDir=1;alienSpeed=0.35+lvl*0.1;alienShootTimer=0;
 }
 
-// ─── CLEAR ALL BUFFS (llamado al pasar de nivel) ──────────────────
 function clearAllBuffs(){
   Object.values(activeBuffs).forEach(b=>{if(b.timer)clearTimeout(b.timer);});
-  activeBuffs={};
-  beamActive=false;
-  buffs=[];
+  activeBuffs={};beamActive=false;buffs=[];
   updateBuffsUI();
   spawnFloater(W/2,H/2,'BUFFS RESETEADOS','#ff8844');
 }
 
-// ─── PAUSE ────────────────────────────────────────────────────────
 function togglePause(){
-  if(gameState==='playing'){
-    gameState='paused';
-    document.getElementById('pause-overlay').style.display='flex';
-  } else if(gameState==='paused'){
-    gameState='playing';
-    document.getElementById('pause-overlay').style.display='none';
-  }
+  if(gameState==='playing'){gameState='paused';document.getElementById('pause-overlay').style.display='flex';}
+  else if(gameState==='paused'){gameState='playing';document.getElementById('pause-overlay').style.display='none';}
 }
 
-// ─── REPAIR SCREEN ────────────────────────────────────────────────
 function showRepairScreen(){
   gameState='repair';
-  const rs=document.getElementById('repair-screen');
-  rs.style.display='flex';
+  const rs=document.getElementById('repair-screen');rs.style.display='flex';
   const grid=document.getElementById('srv-grid');grid.innerHTML='';
   const anyDamaged=servers.some(s=>s.hp>0&&s.hp<s.maxHp);
   const anyDead=servers.some(s=>s.hp===0);
@@ -236,9 +265,7 @@ function showRepairScreen(){
   servers.forEach(s=>{
     const card=document.createElement('div');card.className='srv-card';
     const isFull=s.hp===s.maxHp,isDead=s.hp===0;
-    if(isFull)card.classList.add('full');
-    else if(!isDead)card.classList.add('alive');
-    else card.classList.add('dead');
+    if(isFull)card.classList.add('full');else if(!isDead)card.classList.add('alive');else card.classList.add('dead');
     let pipsHTML='<div class="sc-pips">';
     for(let i=0;i<s.maxHp;i++)pipsHTML+=`<div class="pip" style="background:${i<s.hp?s.buff.color:'#1a0000'}"></div>`;
     pipsHTML+='</div>';
@@ -258,22 +285,16 @@ function repairServer(id){
   if(!s||s.hp===s.maxHp)return;
   if(s.hp===0){s.hp=1;spawnFloater(W/2,H/2-30,`SRV-0${id} REBOOTED`,s.buff.color);}
   else{s.hp=Math.min(s.maxHp,s.hp+1);spawnFloater(W/2,H/2-30,`SRV-0${id} REPAIRED`,s.buff.color);}
-  updateSrvLegend();
-  closeRepairAndNextWave();
+  updateSrvLegend();closeRepairAndNextWave();
 }
 
 function closeRepairAndNextWave(){
   document.getElementById('repair-screen').style.display='none';
-  gameState='playing';
-  level++;
+  gameState='playing';level++;
   document.getElementById('level-val').textContent=level;
-  // Limpiar todos los buffs activos y pickups al pasar de nivel
-  clearAllBuffs();
-  initAliens(level);
-  spawnParticles(W/2,H/2,'#00ffcc',35);
+  clearAllBuffs();initAliens(level);spawnParticles(W/2,H/2,'#00ffcc',35);
 }
 
-// ─── DRAW ─────────────────────────────────────────────────────────
 function drawShip(x,y,alpha){
   ctx.save();ctx.globalAlpha=alpha||1;ctx.translate(x,y);
   const g=ctx.createLinearGradient(-18,-23,18,23);
@@ -343,9 +364,7 @@ function drawServer(s){
   ctx.strokeRect(s.x,s.y,s.w,s.h);
   if(!dead){
     ctx.fillStyle=`${col}12`;ctx.fillRect(s.x,s.y,s.w*hp,s.h);
-    for(let i=0;i<s.maxHp;i++){
-      ctx.fillStyle=i<s.hp?col:'#1a0000';ctx.fillRect(s.x+5+i*10,s.y+s.h-8,7,4);
-    }
+    for(let i=0;i<s.maxHp;i++){ctx.fillStyle=i<s.hp?col:'#1a0000';ctx.fillRect(s.x+5+i*10,s.y+s.h-8,7,4);}
   }
   ctx.font='7px Share Tech Mono,monospace';
   ctx.fillStyle=dead?'#330000':col;ctx.textAlign='center';ctx.textBaseline='middle';
@@ -378,8 +397,7 @@ function drawBullet(b){
 function spawnParticles(x,y,color,count){
   for(let i=0;i<count;i++){
     const ang=Math.random()*Math.PI*2,spd=0.5+Math.random()*3.5;
-    particles.push({x,y,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,
-      color,life:1,decay:0.035+Math.random()*0.04,size:1.5+Math.random()*3});
+    particles.push({x,y,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,color,life:1,decay:0.035+Math.random()*0.04,size:1.5+Math.random()*3});
   }
 }
 
@@ -406,18 +424,15 @@ function updateBeam(){
   beamActive=!!(keys[' ']||keys['Space']);
   if(!beamActive){beamHits=[];return;}
   const bx=ship.x;
-  const aliveAliens=aliens.filter(a=>a.alive);
-  aliveAliens.forEach(a=>{
+  aliens.filter(a=>a.alive).forEach(a=>{
     if(bx>a.x&&bx<a.x+a.w&&a.y<ship.y-26){
-      a._beamTimer=(a._beamTimer||0)+1;
-      a.flashTick=frameCount;
+      a._beamTimer=(a._beamTimer||0)+1;a.flashTick=frameCount;
       if(a._beamTimer>BEAM_TICK_DAMAGE){
         a.alive=false;a._beamTimer=0;
         spawnParticles(a.x+a.w/2,a.y+a.h/2,a.color,16);
         spawnBuff(a.x+a.w/2,a.y);
         score+=Math.round(a.pts*(1+level*0.1));
-        document.getElementById('score-val').textContent=score;
-        updateHighScore();
+        document.getElementById('score-val').textContent=score;updateHighScore();
       }
     } else {a._beamTimer=0;}
   });
@@ -436,8 +451,7 @@ function activateBuff(bt){
   if(activeBuffs[bt.id])clearTimeout(activeBuffs[bt.id].timer);
   const timer=bt.duration>0?setTimeout(()=>{delete activeBuffs[bt.id];if(bt.id==='laser')beamActive=false;updateBuffsUI();},bt.duration):null;
   activeBuffs[bt.id]={timer,label:bt.label,color:bt.color,end:bt.duration>0?Date.now()+bt.duration:null};
-  spawnFloater(ship.x,ship.y-30,bt.label,bt.color);
-  updateBuffsUI();
+  spawnFloater(ship.x,ship.y-30,bt.label,bt.color);updateBuffsUI();
 }
 
 function serverDies(s){
@@ -488,9 +502,7 @@ function update(){
   if(invincibleTimer>0)invincibleTimer--;
   if(keys['ArrowLeft']||keys['a']||keys['A'])ship.x=Math.max(20,ship.x-ship.speed);
   if(keys['ArrowRight']||keys['d']||keys['D'])ship.x=Math.min(W-20,ship.x+ship.speed);
-  if(keys[' ']||keys['Space']){
-    if(activeBuffs.laser){/* beam handled below */}else shootPlayer();
-  }
+  if(keys[' ']||keys['Space']){if(!activeBuffs.laser)shootPlayer();}
   updateBeam();
   const aliveAliens=aliens.filter(a=>a.alive);
   const speedMult=activeBuffs.slow?0.28:1;
@@ -520,8 +532,7 @@ function update(){
         spawnParticles(a.x+a.w/2,a.y+a.h/2,a.color,16);
         spawnBuff(a.x+a.w/2,a.y);
         score+=Math.round(a.pts*(1+level*0.1));
-        document.getElementById('score-val').textContent=score;
-        updateHighScore();
+        document.getElementById('score-val').textContent=score;updateHighScore();
       }
     });
   });
@@ -541,8 +552,7 @@ function update(){
         if(hit)return;
         if(b.y>s.y-2&&b.y<s.y+s.h+2&&b.x>s.x&&b.x<s.x+s.w&&s.hp>0){
           s.hp--;s.damaged=15;spawnParticles(s.x+s.w/2,s.y,'#ff8800',8);
-          if(s.hp===0)serverDies(s);
-          hit=true;b.dead=true;
+          if(s.hp===0)serverDies(s);hit=true;b.dead=true;
         }
       });
       return !b.dead&&b.y<H+10;
@@ -551,9 +561,7 @@ function update(){
   aliveAliens.forEach(a=>{
     if(a.y+a.h>=H-50){
       servers.forEach(s=>{
-        if(a.x+a.w>s.x&&a.x<s.x+s.w&&s.hp>0){
-          s.hp=0;s.damaged=20;a.alive=false;serverDies(s);
-        }
+        if(a.x+a.w>s.x&&a.x<s.x+s.w&&s.hp>0){s.hp=0;s.damaged=20;a.alive=false;serverDies(s);}
       });
       if(a.y+a.h>=H-36&&invincibleTimer===0&&!activeBuffs.shield){
         lives--;updateLivesUI();a.alive=false;
@@ -564,17 +572,13 @@ function update(){
   });
   buffs=buffs.filter(bf=>{
     bf.y+=bf.vy;
-    if(bf.x>ship.x-24&&bf.x+bf.w<ship.x+24&&bf.y>ship.y-28&&bf.y<ship.y+28){
-      activateBuff(bf.type);return false;
-    }
+    if(bf.x>ship.x-24&&bf.x+bf.w<ship.x+24&&bf.y>ship.y-28&&bf.y<ship.y+28){activateBuff(bf.type);return false;}
     return bf.y<H;
   });
   particles=particles.filter(p=>{p.x+=p.vx;p.y+=p.vy;p.life-=p.decay;p.vy+=0.04;return p.life>0;});
   floaters=floaters.filter(f=>{f.y+=f.vy;f.life-=0.012;return f.life>0;});
   if(gameState==='playing'&&!aliens.filter(a=>a.alive).length){
-    gameState='repair';
-    beamActive=false;
-    alienBullets=[];
+    gameState='repair';beamActive=false;alienBullets=[];
     setTimeout(()=>showRepairScreen(),400);
   }
   if(frameCount%60===0)updateBuffsUI();
@@ -600,13 +604,10 @@ function draw(){
   stars.forEach(s=>{s.y+=s.spd;if(s.y>H)s.y=0;ctx.fillStyle=`rgba(255,255,255,${0.2+s.s*0.2})`;ctx.fillRect(s.x,s.y,s.s,s.s);});
   ctx.strokeStyle='rgba(0,255,100,0.1)';ctx.lineWidth=1;
   ctx.beginPath();ctx.moveTo(0,H-52);ctx.lineTo(W,H-52);ctx.stroke();
-  servers.forEach(drawServer);
-  aliens.forEach(drawAlien);
-  drawBeam();
+  servers.forEach(drawServer);aliens.forEach(drawAlien);drawBeam();
   const shipAlpha=(invincibleTimer>0&&Math.floor(invincibleTimer/5)%2===0)?0.3:1;
   drawShip(ship.x,ship.y,shipAlpha);
-  bullets.forEach(drawBullet);
-  alienBullets.forEach(drawBullet);
+  bullets.forEach(drawBullet);alienBullets.forEach(drawBullet);
   buffs.forEach(bf=>{
     ctx.save();ctx.strokeStyle=bf.type.color;ctx.lineWidth=1.5;ctx.shadowColor=bf.type.color;ctx.shadowBlur=10;
     ctx.fillStyle='rgba(0,0,0,0.85)';ctx.fillRect(bf.x,bf.y,bf.w,bf.h);ctx.strokeRect(bf.x,bf.y,bf.w,bf.h);
@@ -627,21 +628,18 @@ function draw(){
 }
 
 function endGame(){
-  gameState='gameover';
-  updateHighScore();
+  gameState='gameover';updateHighScore();
   document.getElementById('repair-screen').style.display='none';
   document.getElementById('pause-overlay').style.display='none';
-  const onlineSrvs=servers.filter(s=>s.hp>0).length;
   const isNewRecord=score>0&&score>=highScore;
-  const ov=document.getElementById('overlay');
-  ov.style.display='flex';
+  const ov=document.getElementById('overlay');ov.style.display='flex';
   ov.innerHTML=`
     <h1 style="color:#ff3333;font-family:Orbitron,monospace;font-size:24px;letter-spacing:3px">SYSTEM FAILURE</h1>
     ${isNewRecord?`<p style="color:#ffcc00;font-family:Share Tech Mono,monospace;font-size:11px;letter-spacing:3px;animation:newRecord 0.8s infinite">\u2605 NEW HIGH SCORE \u2605</p>`:''}
     <p style="color:#ff8888;font-family:Share Tech Mono,monospace;font-size:11px;text-align:center;line-height:2">
       SCORE: <span style="color:#00ffcc;font-size:18px;font-weight:bold">${score.toLocaleString()}</span><br>
       RECORD: <span style="color:#ffcc00">${highScore.toLocaleString()}</span><br>
-      NIVEL: <span style="color:#ffcc00">LVL ${level}</span>;
+      NIVEL: <span style="color:#ffcc00">LVL ${level}</span>
     </p>
     <button class="main-btn" id="start-btn" style="margin-top:8px;border-color:#ff4444;color:#ff4444" onmouseover="this.style.background='#ff4444';this.style.color='#000'" onmouseout="this.style.background='#000';this.style.color='#ff4444'">\u21ba REBOOT SYSTEM</button>`;
   document.getElementById('start-btn').addEventListener('click',startGame);
@@ -663,12 +661,48 @@ function startGame(){
 
 function loop(){requestAnimationFrame(loop);update();draw();}
 
+// ─── KONAMI CODE EASTER EGG ───────────────────────────────────────
+const KONAMI_SEQ=['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
+let konamiIdx=0;
+
+function showNiko(){
+  const ov=document.getElementById('konami-overlay');
+  // Reset animation by re-inserting the box
+  const box=document.getElementById('konami-box');
+  box.style.animation='none';
+  void box.offsetWidth; // force reflow
+  box.style.animation='konamiAppear 0.35s cubic-bezier(0.175,0.885,0.32,1.275) forwards';
+  ov.classList.add('visible');
+}
+
+function hideNiko(){
+  document.getElementById('konami-overlay').classList.remove('visible');
+}
+
+document.getElementById('konami-overlay').addEventListener('click', hideNiko);
+
+// ─── INPUT ────────────────────────────────────────────────────────
 document.addEventListener('keydown',e=>{
   keys[e.key]=true;keys[e.code]=true;
   if(e.code==='Space')e.preventDefault();
+
+  // ESC: close niko first, then pause
   if(e.key==='Escape'||e.code==='Escape'){
     e.preventDefault();
+    const konamiOv=document.getElementById('konami-overlay');
+    if(konamiOv.classList.contains('visible')){hideNiko();return;}
     if(gameState==='playing'||gameState==='paused')togglePause();
+  }
+
+  // Konami code tracking
+  if(e.key===KONAMI_SEQ[konamiIdx]){
+    konamiIdx++;
+    if(konamiIdx===KONAMI_SEQ.length){
+      konamiIdx=0;
+      showNiko();
+    }
+  } else {
+    konamiIdx=e.key===KONAMI_SEQ[0]?1:0;
   }
 });
 document.addEventListener('keyup',e=>{keys[e.key]=false;keys[e.code]=false;});
