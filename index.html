@@ -141,11 +141,11 @@ const ERROR_CODES=[
 ];
 
 const ALL_BUFFS=[
-  {id:'rapid',  label:'RAPID FIRE', color:'#ffcc00',icon:'\u26a1',desc:'Cadencia x3',   duration:8000},
+  {id:'rapid',  label:'RAPID FIRE', color:'#ffcc00',icon:'\u26a1',desc:'Cadencia x3',   duration:7000},
   {id:'triple', label:'TRIPLE SHOT',color:'#00ffcc',icon:'\\|/',desc:'3 proyectiles',   duration:7000},
-  {id:'shield', label:'SHIELD',     color:'#4488ff',icon:'\u25c8',desc:'Escudo',         duration:6000},
-  {id:'laser',  label:'MEGA LASER', color:'#ff44ff',icon:'\u2550',desc:'Rayo continuo', duration:7000},
-  {id:'slow',   label:'SLOW MO',    color:'#88ff44',icon:'\u23f1',desc:'Aliens lentos', duration:7000},
+  {id:'shield', label:'SHIELD',     color:'#4488ff',icon:'\u25c8',desc:'Escudo',         duration:4000},
+  {id:'laser',  label:'MEGA LASER', color:'#ff44ff',icon:'\u2550',desc:'Rayo continuo', duration:6000},
+  {id:'slow',   label:'SLOW MO',    color:'#88ff44',icon:'\u23f1',desc:'Aliens lentos', duration:4000},
   {id:'wide',   label:'WIDE SHOT',  color:'#ff8844',icon:'|||',desc:'Disparo ancho',    duration:7000},
 ];
 
@@ -641,8 +641,7 @@ function endGame(){
     <p style="color:#ff8888;font-family:Share Tech Mono,monospace;font-size:11px;text-align:center;line-height:2">
       SCORE: <span style="color:#00ffcc;font-size:18px;font-weight:bold">${score.toLocaleString()}</span><br>
       RECORD: <span style="color:#ffcc00">${highScore.toLocaleString()}</span><br>
-      NIVEL: <span style="color:#ffcc00">LVL ${level}</span> &nbsp;|&nbsp;
-      SERVERS ONLINE: <span style="color:${onlineSrvs>0?'#00ff88':'#ff4444'}">${onlineSrvs}/6</span>
+      NIVEL: <span style="color:#ffcc00">LVL ${level}</span>;
     </p>
     <button class="main-btn" id="start-btn" style="margin-top:8px;border-color:#ff4444;color:#ff4444" onmouseover="this.style.background='#ff4444';this.style.color='#000'" onmouseout="this.style.background='#000';this.style.color='#ff4444'">\u21ba REBOOT SYSTEM</button>`;
   document.getElementById('start-btn').addEventListener('click',startGame);
